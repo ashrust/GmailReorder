@@ -1,7 +1,8 @@
-run = "cowsay Configure me!"
+
+run = "web-ext run"
 
 [nix]
 channel = "stable-24_05"
 
 [deployment]
-run = ["sh", "-c", "cowsay Configure me!"]
+run = ["sh", "-c", "web-ext build"]
