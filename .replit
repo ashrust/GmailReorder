@@ -1,5 +1,7 @@
 run = "cowsay Configure me!"
-entrypoint = "README.md"
 
 [nix]
 channel = "stable-24_05"
+
+[deployment]
+run = ["sh", "-c", "cowsay Configure me!"]
