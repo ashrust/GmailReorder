@@ -1,0 +1,16 @@
+{
+  "manifest_version": 2,
+  "name": "Gmail Reorder",
+  "version": "1.0",
+  "description": "Reorder gmail by star color",
+  "icons": {
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://mail.google.com/*"],
+      "js": ["reorder.js"]
+    }
+  ]
+}
