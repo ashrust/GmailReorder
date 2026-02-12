@@ -1,8 +1,8 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Gmail Reorder",
-  "version": "1.0",
-  "description": "Reorder gmail by star color",
+  "version": "1.1.0",
+  "description": "Reorder Gmail inbox rows by subject or star color",
   "icons": {
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"

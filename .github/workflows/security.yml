@@ -1,0 +1,98 @@
+name: Security Checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    name: Secret Scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_ENABLE_COMMENTS: false
+
+  extension-safety:
+    name: Extension Safety Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Block dynamic code execution
+        run: |
+          if grep -nE 'eval[[:space:]]*[(]|new[[:space:]]+Function' reorder.js; then
+            echo "Forbidden dynamic execution API found in reorder.js"
+            exit 1
+          fi
+
+      - name: Block unexpected network APIs in content script
+        run: |
+          if grep -nE '\\bfetch\\b|\\bXMLHttpRequest\\b|navigator\\.sendBeacon\\b' reorder.js; then
+            echo "Unexpected network API found in reorder.js"
+            exit 1
+          fi
+
+      - name: Validate manifest scope
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+
+          const manifest = JSON.parse(fs.readFileSync('manifest.json', 'utf8'));
+          const expectedMatch = '*://mail.google.com/*';
+
+          if (manifest.manifest_version !== 3) {
+            throw new Error('manifest_version must be 3');
+          }
+
+          const contentScripts = manifest.content_scripts || [];
+          if (contentScripts.length === 0) {
+            throw new Error('content_scripts must not be empty');
+          }
+
+          for (const script of contentScripts) {
+            const matches = script.matches || [];
+            if (!matches.length) {
+              throw new Error('each content script needs matches');
+            }
+            for (const match of matches) {
+              if (match !== expectedMatch) {
+                throw new Error(`unsupported content script match: ${match}`);
+              }
+            }
+          }
+
+          const hostPermissions = manifest.host_permissions || [];
+          for (const permission of hostPermissions) {
+            if (permission !== expectedMatch) {
+              throw new Error(`unsupported host permission: ${permission}`);
+            }
+          }
+
+          const blockedPermissions = new Set([
+            'tabs',
+            'webRequest',
+            'webRequestBlocking',
+            'declarativeNetRequest',
+            '<all_urls>'
+          ]);
+
+          const permissions = manifest.permissions || [];
+          for (const permission of permissions) {
+            if (blockedPermissions.has(permission)) {
+              throw new Error(`blocked permission present: ${permission}`);
+            }
+          }
+
+          console.log('Manifest scope validation passed.');
+          NODE
