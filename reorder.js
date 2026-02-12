@@ -128,14 +128,47 @@
   }
 
   function hasPinnedLabel(emailRow) {
-    const labelElements = emailRow.querySelectorAll("span.at");
-    for (const labelElement of labelElements) {
-      const text = labelElement.textContent.trim().toLowerCase();
-      if (PRIORITY_LABELS.has(text)) {
-        return true;
+    const labelSelectors = [
+      "span.at",
+      "span.av",
+      "span[title]",
+      "div[title]",
+      "span[data-tooltip]",
+      "div[data-tooltip]",
+      "span[aria-label]",
+      "div[aria-label]"
+    ];
+
+    const seen = new Set();
+    for (const selector of labelSelectors) {
+      const elements = emailRow.querySelectorAll(selector);
+      for (const element of elements) {
+        const values = [
+          element.textContent || "",
+          element.getAttribute("title") || "",
+          element.getAttribute("data-tooltip") || "",
+          element.getAttribute("aria-label") || ""
+        ];
+
+        for (const value of values) {
+          const normalized = value.trim().toLowerCase().replace(/\s+/g, " ");
+          if (!normalized || seen.has(normalized)) {
+            continue;
+          }
+          seen.add(normalized);
+          if (PRIORITY_LABELS.has(normalized)) {
+            return true;
+          }
+        }
       }
     }
-    return false;
+
+    // Fallback for Gmail markup variations where label chips are rendered differently.
+    const rowText = (emailRow.textContent || "").toLowerCase();
+    return (
+      rowText.includes("sr founder") ||
+      rowText.includes("sr grant founder")
+    );
   }
 
   function applyLayoutStyles(parent) {
